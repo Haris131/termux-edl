@@ -134,8 +134,8 @@ pkg update -y
 pkg install -y libusb python termux-api binutils clang make
 
 # Clone repository
-git clone --branch termux-edl https://github.com/bkerler/edl
-cd edl
+git clone --depth=1 --branch=termux-edl https://github.com/haris131/termux-edl
+cd termux-edl
 git submodule update --init --recursive
 
 # Install Python dependencies

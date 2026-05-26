@@ -21,6 +21,11 @@ def _reset_input_buffer_org(self):
 
 
 import serial
+if sys.platform == 'android':
+    from serial.tools import list_ports_linux
+    serial.tools.list_ports_linux  # suppress unused warning
+    sys.modules['serial.tools.list_ports_posix'] = type(sys)('serial.tools.list_ports_posix')
+    sys.modules['serial.tools.list_ports_posix'].comports = list_ports_linux.comports
 import serial.tools.list_ports
 import inspect
 

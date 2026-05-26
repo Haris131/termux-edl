@@ -126,6 +126,36 @@ git submodule update --init --recursive
 pip3 install .
 ```
 
+### Android / Termux:
+
+```bash
+# Install system dependencies
+pkg update -y
+pkg install -y libusb python termux-api binutils clang make
+
+# Clone repository
+git clone --branch termux-edl https://github.com/bkerler/edl
+cd edl
+git submodule update --init --recursive
+
+# Install Python dependencies
+pip install --upgrade pip
+pip install -r requirements.txt
+
+# Usage (auto-detects Termux environment)
+python edl.py <command>
+
+# First-time USB permission:
+# 1. Connect your device in EDL mode
+# 2. Run: termux-usb -r /dev/bus/usb/001/048
+# 3. Tap 'Grant' on the permission dialog
+```
+
+Or use the automated setup script:
+```bash
+bash termux-setup.sh
+```
+
 ### Windows:
 
 #### Method 1 - Automatic with PowerShell (Windows 10 and later)

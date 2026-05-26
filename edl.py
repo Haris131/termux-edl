@@ -135,11 +135,28 @@ import subprocess
 import sys
 import time
 
+# Patch pyserial for Android/Termux before any serial imports
+if sys.platform == 'android':
+    import serial.tools.list_ports_linux as _lpl
+    import types as _types
+    _fake_mod = _types.ModuleType('serial.tools.list_ports_posix')
+    _fake_mod.comports = _lpl.comports
+    sys.modules['serial.tools.list_ports_posix'] = _fake_mod
+
 from docopt import docopt
 
 from edlclient.Config.usb_ids import default_ids
 from edlclient.Library.Connection.seriallib import serial_class
 from edlclient.Library.Connection.usblib import usb_class
+
+try:
+    from edlclient.Library.Connection.termux_usblib import termux_usb_class, _is_termux
+except ImportError:
+    termux_usb_class = None
+
+    def _is_termux():
+        return False
+
 from edlclient.Library.firehose_client import firehose_client
 from edlclient.Library.sahara import sahara
 from edlclient.Library.sahara_defs import cmd_t, sahara_mode_t
@@ -283,7 +300,18 @@ class main(metaclass=LogBase):
             self.serial = True
         else:
             self.portname = ""
-        if self.serial:
+
+        use_termux = not self.serial and _is_termux()
+
+        if use_termux and termux_usb_class is not None:
+            self.info("Using Termux USB backend")
+            if self.args["--serial_number"]:
+                self.serial_number = self.args["--serial_number"]
+            self.cdc = termux_usb_class(
+                portconfig=portconfig, loglevel=self.__logger.level,
+                serial_number=self.serial_number
+            )
+        elif self.serial:
             self.cdc = serial_class(loglevel=self.__logger.level, portconfig=portconfig)
         else:
             if self.args["--serial_number"]:

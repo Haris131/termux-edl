@@ -733,7 +733,7 @@ class firehose(metaclass=LogBase):
 
         progbar = progress(self.cfg.SECTOR_SIZE_IN_BYTES)
         rsp = self.xmlsend(data, self.skipresponse)
-        if "value" in rsp.data and rsp.data["value"] == "NAK":
+        if isinstance(rsp.data, dict) and rsp.data.get("value") == "NAK":
             return rsp
         self.cdc.xmlread = False
         resData = bytearray()
@@ -766,17 +766,18 @@ class firehose(metaclass=LogBase):
                     if rsp["rawmode"] == "false":
                         return response(resp=True, data=resData)
             else:
-                if len(rsp) > 1:
-                    if b"Failed to open the UFS Device" in rsp[2]:
-                        self.error(f"Error:{rsp[2]}")
-                    self.lasterror = rsp[2]
-                return response(resp=False, data=resData, error=rsp[2])
-        if rsp["value"] != "ACK":
-            self.lasterror = rsp[2]
+                err_str = str(rsp)
+                if b"Failed to open the UFS Device" in wd:
+                    self.error(f"Error:{err_str}")
+                self.lasterror = err_str
+                return response(resp=False, data=resData, error=err_str)
+        err_str = str(rsp.get("value", rsp))
+        if err_str != "ACK":
+            self.lasterror = err_str
         if display and prog != 100:
             progbar.show_progress(prefix="Read", pos=total, total=total, display=display)
-        resp = rsp["value"] == "ACK"
-        return response(resp=resp, data=resData, error=rsp[2])  # Do not remove, needed for oneplus
+        resp = err_str == "ACK"
+        return response(resp=resp, data=resData, error=err_str)  # Do not remove, needed for oneplus
 
     def get_gpt(self, lun, gpt_num_part_entries, gpt_part_entry_size, gpt_part_entry_start_lba, start_sector=1):
         try:

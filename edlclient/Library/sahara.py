@@ -133,6 +133,30 @@ class sahara(metaclass=LogBase):
                 elif v[0] == 0x7E:
                     return {"mode": "nandprg"}
             else:
+                hello_rsp = pack("<IIIIIIIIIIII",
+                    cmd_t.SAHARA_HELLO_RSP, 0x30, 2, 1, 0,
+                    sahara_mode_t.SAHARA_MODE_COMMAND,
+                    1, 2, 3, 4, 5, 6)
+                self.cdc.write(hello_rsp)
+                res = self.cdc.read(timeout=2000)
+                if len(res) >= 4:
+                    if res[0] == cmd_t.SAHARA_HELLO_REQ:
+                        pkt = self.ch.pkt_hello_req(res)
+                        self.pktsize = pkt.cmd_packet_length
+                        self.version = pkt.version
+                        return {"mode": "sahara", "cmd": cmd_t.SAHARA_HELLO_REQ, "data": pkt}
+                    if res[0] == cmd_t.SAHARA_CMD_READY:
+                        self.info("Sahara device ready (proactive handshake)")
+                        self.pktsize = 0x30
+                        self.version = 2
+                        return {"mode": "sahara", "cmd": cmd_t.SAHARA_CMD_READY, "data": None}
+                    if res[0] == cmd_t.SAHARA_END_TRANSFER:
+                        rsp = self.ch.pkt_image_end(res)
+                        return {"mode": "sahara", "cmd": cmd_t.SAHARA_END_TRANSFER, "data": rsp}
+                if b"<?xml" in res:
+                    return {"mode": "firehose"}
+                if len(res) > 0 and res[0] == 0x7E:
+                    return {"mode": "nandprg"}
                 data = b"<?xml version=\"1.0\" ?><data><nop /></data>"
                 self.cdc.write(data)
                 res = self.cdc.read(timeout=1)
